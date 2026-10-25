@@ -239,15 +239,15 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for: Help connecting the model-based and writing-style signals in my /submit endpoint and combining them into one score.*
+- *What came back:ChatGPT suggested using scoring.py::combine_signals to calculate a weighted average and scoring.py::score_to_label to assign a result based on the configured thresholds.*
+- *What I changed: I integrated the scoring functions, tested submissions through the Flask endpoint, and verified that the individual scores and combined score appeared in the response and audit log. I also documented cases where the detector produced unexpected classifications.*
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:Help implementing the unfinished /appeal endpoint so writers could challenge a result.*
+- *What came back:ChatGPT provided an implementation that validates the request, checks whether the submitted content_id exists, records the writer's reasoning, and returns an under_review status.*
+- *What I changed:I replaced the unfinished route, submitted an appeal using an existing content ID, and checked GET /log to verify that the original decision and the new appeal event were recorded. I documented the results in my README.*
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
