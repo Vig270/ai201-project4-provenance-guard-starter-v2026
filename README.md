@@ -87,24 +87,45 @@
 
 ---
 
-## Label Variants
+## Label Variants for Milestone 4
 
-<!-- The exact text of all three labels, as a reader would see them, and the
-     score range each covers.
+## Milestone 4: Combining Detection Signals
 
-     Write them for someone who has never heard the word "threshold". -->
+Provenance Guard combines two heuristic signals to produce a single score.
 
-| Label | Score range | The exact text a reader sees |
-|---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+### Scoring approach
 
-**Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
+The function `scoring.py::combine_signals` calculates a weighted average:
 
+- **Model signal: 70%**
+- **Style signal: 30%**
+
+The combined score is calculated as:
+
+`combined_score = 0.7 * model_score + 0.3 * style_score`
+
+The configured thresholds are:
+
+- **Human:** combined score at or below `0.35`
+- **Unsure:** combined score above `0.35` and below `0.65`
+- **AI:** combined score at or above `0.65`
+
+The returned confidence value represents the score's distance from the midpoint of `0.5`. It is a heuristic, not a calibrated probability that the classification is correct.
+
+### Sample evaluation
+
+| Sample | Model score | Style score | Combined score | Result |
+|---|---:|---:|---:|---|
+| Clearly AI-like | 0.8275 | 0.2899 | 0.6662 | AI |
+| Clearly human | 0.5287 | 0.3974 | 0.4893 | Unsure |
+| Formal human | 0.5261 | 0.2821 | 0.4529 | Unsure |
+| Lightly edited AI | 0.3137 | 0.3951 | 0.3381 | Human |
+
+### Limitations
+
+These examples demonstrate that the scoring pipeline works, but they do not establish detector accuracy. The clearly AI-like sample was classified as AI, while the clearly human sample remained inconclusive and the lightly edited AI sample was classified as human.
+
+Writing style and model scores can overlap between human-written and AI-generated text. The results should therefore be treated as heuristic signals, not proof of authorship. More representative labeled data and systematic evaluation would be needed to assess accuracy and tune the thresholds responsibly.
 
 
 ---

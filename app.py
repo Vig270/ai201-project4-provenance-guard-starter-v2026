@@ -32,6 +32,8 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import scoring
+import stylometry
 
 app = Flask(__name__)
 
@@ -158,31 +160,33 @@ def health():
 @app.post("/submit")
 def submit():
     """
-    Accept a text submission, score it, log the decision, and return JSON.
+    Score a text submission using both signals, log the decision,
+    and return the result.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
 
-    # Validate the incoming request.
+    if not isinstance(payload, dict):
+        payload = {}
+
     text = payload.get("text", "")
     creator_id = payload.get("creator_id") or "unknown"
 
+    # Validate the incoming text.
     if not isinstance(text, str) or not text.strip():
         return jsonify({
             "error": "invalid_text",
             "message": "Please provide non-empty text."
         }), 400
 
-    # Prevent excessively large submissions.
     if len(text) > 10000:
         return jsonify({
             "error": "text_too_long",
             "message": "Text must be 10,000 characters or fewer."
         }), 400
 
-    # Give this submission a unique ID.
     content_id = str(uuid.uuid4())
 
-    # Milestone 3: calculate the first signal.
+    # Calculate both signals.
     try:
         model_score = detector.model_signal(text)
     except ValueError as exc:
@@ -191,27 +195,40 @@ def submit():
             "message": str(exc)
         }), 400
 
-    # Milestone 3: record the decision in the audit log.
+    style_score = stylometry.style_signal(text)
+
+    # Combine the signals and determine the label.
+    combined_score = scoring.combine_signals(
+        model_score,
+        style_score
+    )
+    guess, label = scoring.score_to_label(combined_score)
+
+    # Express how far the score is from the uncertain midpoint.
+    confidence = round(abs(combined_score - 0.5) * 2, 4)
+
+    # Record all three scores in the audit log.
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
-        guess="uncertain",
+        guess=guess,
         model_score=model_score,
-        style_score=None,
-        combined_score=None,
-        label="uncertain",
+        style_score=style_score,
+        combined_score=combined_score,
+        label=label,
         status="decided",
     )
 
-    # Return the result.
     return jsonify({
         "content_id": content_id,
-        "guess": "uncertain",
-        "confidence": 0.5,
-        "label": "uncertain",
+        "guess": guess,
+        "confidence": confidence,
+        "label": label,
         "model_score": model_score,
-        "style_score": None
+        "style_score": style_score,
+        "combined_score": combined_score,
     }), 200
+
 
 
 @app.post("/appeal")
