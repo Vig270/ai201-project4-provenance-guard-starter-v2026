@@ -42,62 +42,54 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
 
-<!-- Your criterion. It must name a number. -->
+## 1. False positives - How often may a human's writing get called AI?
 
-
+Of 10 pieces of writing I wrote myself, at most 1 should receive a high-confidence AI label in each trial.
 
 **Why this target:**
 
-
+I chose this target because falsely accusing a human writer of using AI could be unfair. I want the system to avoid incorrectly labeling genuine human writing as AI-generated.
 
 ---
 
-## 2.
+## 2. Score spread - How far apart should clearly-AI and clearly-human text score?
 
-<!-- Your criterion. -->
-
-
+The average score for 5 clearly AI-generated samples should be at least 0.2 higher than the average score for 5 clearly human-written samples in each trial.
 
 **Why this target:**
 
-
+I chose this target because AI-generated and human-written samples should show a measurable difference in their scores. A noticeable difference can help the system distinguish between the two, although the score alone cannot prove who wrote the text.
 
 ---
 
-## 3.
+## 3. Label coverage - Is every one of your three labels actually reachable?
 
-<!-- Your criterion. -->
-
-
+All 3 labels must appear at least once across the test samples in each trial.
 
 **Why this target:**
 
-
+I chose this target because the system should be able to represent different levels of certainty instead of assigning every submission the same label. This helps users understand that some results may be uncertain.
 
 ---
 
-## 4.
+## 4. The appeal path - Does an appeal always change status and always get recorded?
 
-<!-- Your criterion. -->
-
-
+All 5 valid appeal attempts must be recorded in the audit log, and each corresponding submission must change to `under_review`.
 
 **Why this target:**
 
-
+I chose this target because writers should have a fair chance to challenge a result they believe is incorrect. Recording every appeal makes the process traceable and accountable.
 
 ---
 
-## 5.
+## 5. Bad input - What happens when `text` is missing, empty, or enormous?
 
-<!-- Your criterion. -->
-
-
+Requests with missing or empty text, or text exceeding 10,000 characters, must receive a clear client-error response rather than a server-error response.
 
 **Why this target:**
 
+I chose this target because validating input can prevent unexpected errors and help the service handle invalid submissions safely instead of producing misleading results.
 
 
 ---
