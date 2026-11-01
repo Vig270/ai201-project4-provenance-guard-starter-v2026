@@ -361,6 +361,255 @@ that produced it:
 
 ```
 
+## Milestone 4 — Criteria Review and Failure Analysis
+
+**Review date:** November 1, 2026  
+**Evaluation runs:** November 1, 2026  
+**Attack dataset:** `attack_sets/`  
+**Total attack cases:** 56
+
+### 1. Original Criteria and Verdicts
+
+The five original success criteria were reviewed against the evaluation run, audit log, and Milestone 2 attack results. The targets were not lowered or changed to make the results appear successful.
+
+| # | Success Criterion | Verdict | Evidence |
+|---|---|---|---|
+| C1 | Of 10 pieces of writing I wrote myself, at most 1 should receive a high-confidence AI label in each trial. | **MET** | All three trials produced zero AI labels among the 10 self-written samples. |
+| C2 | The average score for 5 clearly AI-generated samples should be at least 0.2 higher than the average score for 5 clearly human-written samples in each trial. | **MISSED — NOT MEASURED** | No score-spread scenario was configured, so the required averages could not be calculated. |
+| C3 | All 3 labels must appear at least once across the test samples in each trial. | **MISSED** | All three samples in each trial received the `unsure` label. Neither `human` nor `ai` appeared. |
+| C4 | All 5 valid appeal attempts must be recorded in the audit log, and each corresponding submission must change to `under_review`. | **MISSED — NOT FULLY DEMONSTRATED** | Only 2 valid appeal events were found in the audit log. Both were recorded with `under_review`, but the target was 5. |
+| C5 | Requests with missing or empty text, or text exceeding 10,000 characters, must receive a clear client-error response rather than a server-error response. | **MET FOR TESTED CASES** | Missing text, whitespace-only text, an empty request body, and 60,000-character text received HTTP 400 responses. The exact empty-string JSON case and response-message clarity were not independently verified. |
+
+### 2. Evaluation Evidence
+
+#### C1 — False Positives: MET
+
+The self-written sample evaluation ran three trials with 10 samples per trial.
+
+All three trials produced the same label sequence:
+
+`human, unsure, human, unsure, unsure, human, unsure, unsure, human, human`
+
+- High-confidence AI labels: 0 per trial.
+- Allowed maximum: 1 per trial.
+- Result: MET.
+
+However, the separate Milestone 2 false-positive attack set revealed a weakness. Five human-written samples (FP03–FP07) received an `ai` label. These were separate samples from the 10 pieces of self-written text used for C1.
+
+This means the original C1 test passed, but the broader attack testing still exposed false-positive behavior.
+
+#### C2 — Score Spread: MISSED — NOT MEASURED
+
+The required scenario comparing five clearly AI-generated samples against five clearly human-written samples was not configured in `scenarios.py`.
+
+Consequently, there are no three-trial average scores available to compare against the required 0.2 difference.
+
+The criterion remains unchanged. The missing evaluation scenario represents an incomplete test plan, not evidence that the score-spread target was achieved or failed by the detector.
+
+#### C3 — Label Coverage: MISSED
+
+The label-coverage evaluation contained three samples per trial. All three received `unsure` in each of the three trials.
+
+| Sample | Combined Score | Label |
+|---|---:|---|
+| Sample 1 | 0.5857 | unsure |
+| Sample 2 | 0.6433 | unsure |
+| Sample 3 | 0.6176 | unsure |
+
+The three scores all fell between the configured human and AI thresholds:
+
+- Human: score ≤ 0.35
+- Unsure: score between 0.35 and 0.65
+- AI: score ≥ 0.65
+
+The system therefore produced only one of the three required labels.
+
+**Failure mechanism:** Stage 4, the combining rule, produced scores inside the middle range. Stage 5, label mapping, correctly assigned `unsure` to those scores. The failure was the lack of score diversity across the test samples, rather than evidence that the label-mapping code malfunctioned.
+
+Note: The label-coverage scenario was incorrectly numbered as criterion 2 in `scenarios.py`. It should be associated with C3.
+
+#### C4 — Appeal Path: MISSED — NOT FULLY DEMONSTRATED
+
+The audit extract contained two valid appeal events:
+
+- Content ID `b23a88ef-d973-4482-ab10-728a218a2d99` — status `under_review`.
+- Content ID `d6d5d9c6-ebfa-4a50-ac99-e3f0b58683ec` — status `under_review`.
+
+Both recorded appeals successfully reached the expected review status.
+
+However, the original target required five valid appeal attempts. Only two were demonstrated in the available audit evidence.
+
+**Failure mechanism:** The available evidence points to incomplete test coverage of the appeal workflow, rather than a demonstrated failure of the two recorded appeals. The route and status transition worked for both recorded cases, but the full five-attempt requirement was not verified.
+
+#### C5 — Bad Input: MET FOR TESTED CASES
+
+The malformed-request tests produced these relevant results:
+
+| Attack ID | Input | HTTP Status | Assessment |
+|---|---|---:|---|
+| RQ01 | Missing text field | 400 | HELD |
+| MF01 | Whitespace-only text | 400 | HELD |
+| RQ09 | Empty request body | 400 | HELD |
+| MF08 | 60,000-character text | 400 | HELD |
+
+These requests received client-error responses instead of server-error responses.
+
+The exact case of a JSON request containing `text: ""` was not separately tested. The response bodies were also not included in the attack summary, so the clarity of the error messages was not independently assessed.
+
+The criterion is considered met for the tested cases, with those verification limitations documented.
+
+### 3. Milestone 2 Attack Results
+
+A total of 56 attack cases were evaluated. The verdicts were manually assigned because the attack runner could not determine whether every attack had achieved its intended objective.
+
+| Attack Family | HELD | BROKE | Total |
+|---|---:|---:|---:|
+| Evasion | 7 | 3 | 10 |
+| False Positive | 3 | 5 | 8 |
+| Prompt Injection | 5 | 1 | 6 |
+| Malformed Requests | 16 | 4 | 20 |
+| Flood Protection | 12 | 0 | 12 |
+| **Total** | **43** | **13** | **56** |
+
+**Verdict definitions:**
+- **HELD:** The system resisted the tested attack or met the expected behavior.
+- **BROKE:** The system produced an outcome that violated the attack's intended protection or expected behavior.
+
+#### Broken Attack Cases
+
+| Attack ID | Failure |
+|---|---|
+| EV01 | AI-written text with typos received `human`. |
+| EV05 | AI-written text after a heavy human-editing pass received `human`. |
+| EV08 | AI-written text below the token window received `human`. |
+| FP03 | Carefully written text from a non-native English speaker received `ai`. |
+| FP04 | A student essay written to a rubric received `ai`. |
+| FP05 | Human-written technical documentation received `ai`. |
+| FP06 | Human writing imitating a formal template received `ai`. |
+| FP07 | Human writing with deliberate phrase repetition received `ai`. |
+| PI02 | Text containing an instruction disguised as a system message received `human`. |
+| MF03 | Control-character-only text was accepted with HTTP 200. |
+| MF04 | Punctuation-only text was accepted with HTTP 200. |
+| RQ02 | A request without `creator_id` was accepted with HTTP 200. |
+| RQ06 | A request with an object as `creator_id` was accepted with HTTP 200. |
+
+Emoji-only text (MF06) was treated as HELD because emoji are valid Unicode input. Right-to-left text (MF07) was also treated as HELD because valid text should not be rejected solely due to its writing direction.
+
+The two form-encoded requests (RQ10 and RQ11) received HTTP 429 responses during rate limiting. They were treated as HELD at the endpoint boundary, although their content-type validation behavior could not be determined from those responses.
+
+### 4. Five-Stage Failure Analysis
+
+The system's decision pipeline consists of five stages:
+
+1. **Route:** `app.py::submit` receives and validates the request.
+2. **Signal One:** `detector.py::model_signal` estimates AI-likeness using GPT-2 perplexity.
+3. **Signal Two:** `stylometry.py::style_signal` evaluates writing characteristics such as sentence-length variation, word diversity, and punctuation density.
+4. **Combining Rule:** `scoring.py::combine_signals` combines the signals using 70% model signal and 30% style signal.
+5. **Label Mapping:** `scoring.py::score_to_label` maps the combined score to `human`, `unsure`, or `ai`.
+
+#### Evasion Failures: EV01, EV05, EV08
+
+The audit log provided the following signal values:
+
+| Attack | Model Signal | Style Signal | Combined Score | Final Label |
+|---|---:|---:|---:|---|
+| EV01 | 0.1635 | 0.3661 | 0.2243 | human |
+| EV05 | 0.3212 | 0.2469 | 0.2989 | human |
+| EV08 | 0.2452 | 0.3333 | 0.2716 | human |
+
+**Failure stage:** Primarily Stages 2 and 3.
+
+Both signals produced low scores for these AI-written samples. The combining rule then produced scores below the human threshold, and label mapping correctly returned `human`.
+
+The route worked as expected. The failure was that the signals did not recognize these altered AI-generated samples as sufficiently AI-like.
+
+#### False-Positive Failures: FP03–FP07
+
+The audit log provided the following values:
+
+| Attack | Model Signal | Style Signal | Combined Score | Final Label |
+|---|---:|---:|---:|---|
+| FP03 | 0.8051 | 0.3525 | 0.6693 | ai |
+| FP04 | 0.8329 | 0.3268 | 0.6811 | ai |
+| FP05 | 0.8005 | 0.4288 | 0.6890 | ai |
+| FP06 | 0.8814 | 0.3004 | 0.7071 | ai |
+| FP07 | 0.8816 | 0.3394 | 0.7189 | ai |
+
+**Failure stage:** Primarily Stage 2, with Stage 4 contributing to the final outcome.
+
+The model signal consistently produced high scores for these human-written samples. The style signal generally produced lower scores, but the 70% model weighting kept every combined score above the AI threshold.
+
+The combining rule and label mapping followed their configured behavior. The underlying model signal was the dominant contributor to these false positives.
+
+#### Prompt-Injection Failure: PI02
+
+| Attack | Model Signal | Style Signal | Combined Score | Final Label |
+|---|---:|---:|---:|---|
+| PI02 | 0.2044 | 0.2091 | 0.2058 | human |
+
+**Failure stage:** Stages 2–4.
+
+Both signals produced low values, resulting in a combined score below the human threshold. Label mapping correctly returned `human`.
+
+This demonstrates that instruction-like text can receive a human classification. It does not establish that the embedded instruction executed, changed application behavior, or compromised the audit log.
+
+#### Malformed Input Failures: MF03, MF04, RQ02, RQ06
+
+**Failure stage:** Stage 1 — Route and input validation.
+
+- MF03: Control-character-only text was accepted.
+- MF04: Punctuation-only text was accepted.
+- RQ02: Missing `creator_id` was accepted.
+- RQ06: An object was accepted as `creator_id`.
+
+These cases indicate that input validation does not reject every unusable text value or invalid creator identifier before processing.
+
+The route successfully handled other malformed requests with HTTP 400, but these four cases reveal gaps in its validation rules.
+
+#### Flood Protection
+
+**Result:** HELD.
+
+The first five submissions from the same creator were accepted with HTTP 200. The next seven were rejected with HTTP 429.
+
+**Stage:** Stage 1 — Route and rate limiting.
+
+The rate limiter enforced the configured five-submissions-per-minute limit during the attack test.
+
+### 5. Patterns and Overall Findings
+
+The evaluation and attack results revealed several patterns:
+
+1. **The model signal is a major source of classification errors.** It produced high scores for several human-written samples and low scores for altered AI-generated samples.
+2. **The style signal did not consistently compensate for model-signal errors.** The 70/30 weighting favored the model signal, which contributed to the five false positives.
+3. **The middle confidence range was not adequately represented in the label-coverage evaluation.** All three samples received `unsure`.
+4. **Input validation needs stronger coverage.** Control-character-only and punctuation-only text, along with invalid creator identifiers, were accepted.
+5. **Rate limiting worked in the tested flood scenario.** Seven submissions beyond the initial five were blocked.
+6. **The appeal workflow showed successful individual transitions, but the required five attempts were not demonstrated.**
+7. **Evaluation coverage was incomplete.** The score-spread scenario was missing, and the label-coverage scenario was assigned the wrong criterion number.
+
+### 6. Conclusion
+
+Milestone 4 showed that the system successfully handled several basic protections, including the tested self-written samples, common malformed requests, and rapid repeated submissions. However, the broader attack tests exposed weaknesses in AI-text classification, false-positive prevention, input validation, and evaluation coverage.
+
+The most significant classification issue was the model signal's tendency to assign high scores to certain human-written samples while assigning low scores to some altered AI-generated samples. The 70% model weighting allowed these signal outputs to strongly influence the final classification.
+
+The label-mapping and combining functions generally behaved according to their configured rules. The results therefore point primarily to signal quality and test coverage as areas requiring further investigation, rather than evidence that the threshold logic itself malfunctioned.
+
+The original success criteria and thresholds were preserved. Unmeasured or incompletely tested criteria were documented honestly instead of being lowered to produce a passing result.
+
+**Supporting evidence:**
+- `results/run_2026-11-01_1628_before.md`
+- `results/attack_run_2026-11-01_1634.md`
+- `results/audit_extract.json`
+- `scenarios.py`
+- `config.py`
+- `scoring.py`
+- `detector.py`
+- `stylometry.py`
+- `app.py`
+
+
 **Diagnoses**
 
 <!-- For each miss AND each broken attack: the stage and the mechanism.
