@@ -278,9 +278,18 @@ Five submissions succeeded, and the remaining ten were rejected with HTTP 429 (T
 ---
 
 ## Attack Run — Before
-
 <!-- Every attack with its outcome and a held-or-broke mark.
-     `run_attacks.py --label before` produces the table. -->
+     run_attacks.py --label before produces the table. -->
+
+Ten audit log entries from the run
+
+<!-- Add ten actual entries from the attack run here. -->
+
+
+
+The single worst outcome — the one I'd least want to explain to a writer whose work got caught by it:
+
+<!-- Describe the worst false positive or other harmful outcome from the attack run here. -->
 
 
 
@@ -296,6 +305,40 @@ Five submissions succeeded, and the remaining ten were rejected with HTTP 429 (T
 whose work got caught by it:
 
 
+### Milestone 2 — Attack Set Testing
+
+**Test date:** November 1, 2026  
+**Dataset:** `attack_sets/`  
+**Total attack cases:** 56
+
+#### Results Summary
+
+| Attack Family | HELD | BROKE | Total |
+|---|---:|---:|---:|
+| Evasion | 7 | 3 | 10 |
+| False Positive | 3 | 5 | 8 |
+| Prompt Injection | 5 | 1 | 6 |
+| Malformed Requests | 14 | 6 | 20 |
+| Flood Protection | 12 | 0 | 12 |
+| **Total** | **41** | **15** | **56** |
+
+#### Key Findings
+
+- **Evasion:** Three AI-generated submissions were classified as human, showing that the detector can be bypassed.
+- **False Positives:** Five human-writing test cases were classified as AI, demonstrating a weakness in distinguishing certain human writing styles.
+- **Prompt Injection:** One test received a human classification. The other five received unsure classifications. These results evaluate classification behavior and do not independently establish whether an injection instruction executed.
+- **Malformed Requests:** Invalid input validation needs improvement. Control-character-only text, punctuation-only text, emoji-only text, missing creator IDs, and non-string creator IDs were accepted.
+- **Flood Protection:** The rate limiter successfully blocked requests exceeding five submissions per minute. The first five requests were accepted, and the next seven received HTTP 429 responses.
+
+*Note: RQ10 and RQ11 received HTTP 429 responses due to rate limiting, so their content-type validation was inconclusive.*
+
+#### Evidence
+
+- Attack results: `results/attack_run_2026-11-01_1634.md`
+- Audit log extract: `results/audit_extract.json`
+- Attack datasets: `attack_sets/`
+
+The audit log extract contains successful decisions and rejected submissions, including rate-limited requests.
 
 ---
 
@@ -409,3 +452,109 @@ that produced it:
 ---
 
 📖 **How to run this project: [RUNNING.md](RUNNING.md)**
+
+#### Audit Log Evidence
+
+The following entries demonstrate five successful submissions and five requests rejected by the rate limiter during flood testing.
+
+``json
+[
+    {
+        "combined_score":  0.1312,
+        "content_id":  "11280578-3f71-4941-8fb7-c5837075ddd0",
+        "creator_id":  "attacker_flood",
+        "guess":  "human",
+        "label":  "We think this text is more consistent with human writing, but we can\u0027t be certain who wrote it.",
+        "model_score":  0.0287,
+        "status":  "decided",
+        "style_score":  0.3704,
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "combined_score":  0.1312,
+        "content_id":  "b24cad07-90ba-492e-8732-27bab4b689b1",
+        "creator_id":  "attacker_flood",
+        "guess":  "human",
+        "label":  "We think this text is more consistent with human writing, but we can\u0027t be certain who wrote it.",
+        "model_score":  0.0287,
+        "status":  "decided",
+        "style_score":  0.3704,
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "combined_score":  0.1312,
+        "content_id":  "699316d2-8638-458d-8fc8-e18600cdd38d",
+        "creator_id":  "attacker_flood",
+        "guess":  "human",
+        "label":  "We think this text is more consistent with human writing, but we can\u0027t be certain who wrote it.",
+        "model_score":  0.0287,
+        "status":  "decided",
+        "style_score":  0.3704,
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "combined_score":  0.1312,
+        "content_id":  "db72c0ea-040d-40a4-9b2f-91b602a72177",
+        "creator_id":  "attacker_flood",
+        "guess":  "human",
+        "label":  "We think this text is more consistent with human writing, but we can\u0027t be certain who wrote it.",
+        "model_score":  0.0287,
+        "status":  "decided",
+        "style_score":  0.3704,
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "combined_score":  0.1312,
+        "content_id":  "89b3293f-4970-4f9f-b650-01e62bca0c11",
+        "creator_id":  "attacker_flood",
+        "guess":  "human",
+        "label":  "We think this text is more consistent with human writing, but we can\u0027t be certain who wrote it.",
+        "model_score":  0.0287,
+        "status":  "decided",
+        "style_score":  0.3704,
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "creator_id":  "attacker_flood",
+        "event":  "rejected",
+        "limit":  "5 per 1 minute",
+        "reason":  "rate_limited",
+        "status":  "rejected",
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "creator_id":  "attacker_flood",
+        "event":  "rejected",
+        "limit":  "5 per 1 minute",
+        "reason":  "rate_limited",
+        "status":  "rejected",
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "creator_id":  "attacker_flood",
+        "event":  "rejected",
+        "limit":  "5 per 1 minute",
+        "reason":  "rate_limited",
+        "status":  "rejected",
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "creator_id":  "attacker_flood",
+        "event":  "rejected",
+        "limit":  "5 per 1 minute",
+        "reason":  "rate_limited",
+        "status":  "rejected",
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    },
+    {
+        "creator_id":  "attacker_flood",
+        "event":  "rejected",
+        "limit":  "5 per 1 minute",
+        "reason":  "rate_limited",
+        "status":  "rejected",
+        "timestamp":  "2026-11-01T21:34:21+00:00"
+    }
+]
+``
+
+The rejected entries confirm that the application enforced its configured limit of five submissions per minute.
