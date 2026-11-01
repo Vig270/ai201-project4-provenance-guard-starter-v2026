@@ -155,9 +155,8 @@ def health():
 # ── YOU BUILD THIS ────────────────────────────────────────────────────────────
 
 @app.post("/submit")
-# @limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
+@limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
 
-@app.post("/submit")
 def submit():
     """
     Score a text submission using both signals, log the decision,
@@ -169,16 +168,28 @@ def submit():
         payload = {}
 
     text = payload.get("text", "")
-    creator_id = payload.get("creator_id") or "unknown"
+    creator_id = payload.get("creator_id")
+    if not isinstance(creator_id, str) or not creator_id.strip():
+        creator_id = "unknown"
 
     # Validate the incoming text.
     if not isinstance(text, str) or not text.strip():
+        audit.log_rejection(
+            creator_id=creator_id,
+            reason="invalid_text",
+            error="Please provide non-empty text."
+        )
         return jsonify({
             "error": "invalid_text",
             "message": "Please provide non-empty text."
         }), 400
 
     if len(text) > 10000:
+        audit.log_rejection(
+            creator_id=creator_id,
+            reason="text_too_long",
+            error="Text must be 10,000 characters or fewer."
+        )
         return jsonify({
             "error": "text_too_long",
             "message": "Text must be 10,000 characters or fewer."
@@ -190,6 +201,11 @@ def submit():
     try:
         model_score = detector.model_signal(text)
     except ValueError as exc:
+        audit.log_rejection(
+            creator_id=creator_id,
+            reason="invalid_text",
+            error=str(exc)
+        )
         return jsonify({
             "error": "invalid_text",
             "message": str(exc)

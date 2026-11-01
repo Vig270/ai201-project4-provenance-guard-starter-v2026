@@ -255,21 +255,21 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 5 per minute, 50 per day
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
+I chose five submissions per minute to allow legitimate writers to submit their work while restricting scripts that rapidly send variations to discover the detector's thresholds. The daily limit of 50 provides additional protection against repeated automated submissions.
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
+**What a caller counts as:** A caller is identified by their creator_id in the JSON request. If a valid creator_id is not provided, the system falls back to the request's IP address. This means a script can appear as multiple callers if it changes its creator_id, while multiple people sharing an IP address may be grouped together when they do not provide one.
 differently — one script can look like a thousand callers, and one household
 can look like one. -->
 
+
 **The run of status codes when I pushed past it:**
 
-<!-- python run_attacks.py --flood 15 -->
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
+
+Five submissions succeeded, and the remaining ten were rejected with HTTP 429 (Too Many Requests). All ten rejections were recorded in the audit log.
 
 ```
 
