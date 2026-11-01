@@ -695,6 +695,91 @@ Overall, the 50/50 weighting improved one important area without fixing every we
 - `AI_THRESHOLD = 0.65`
 
 
+
+## Milestone 6: What's Still Broken, and Final Decision
+
+### 1. What's Still Broken
+
+Although changing the scoring weights from 70/30 to 50/50 reduced false positives, several weaknesses remain.
+
+**Evasion attacks**
+
+EV01, EV05, EV06, and EV08 received `human` labels in the after run. These are AI-generated or adversarial samples that the detector did not correctly identify.
+
+- **What I would do:** Improve the detection signals and test additional evasion techniques. I would also investigate why both signals produce scores low enough to result in human classifications.
+- **Why I stopped:** I prioritized one controlled change and a full before-and-after comparison. Further changes would require additional testing to avoid creating new false positives.
+
+**Prompt-injection attacks**
+
+PI01 and PI02 received `human` labels in the after run.
+
+- **What I would do:** Test more prompt-injection variations and investigate whether the input-handling and detection pipeline can better recognize manipulated or adversarial text.
+- **Why I stopped:** The 50/50 change was intended to address the false-positive problem, not fully solve prompt-injection detection. I did not have enough time to implement and validate another separate improvement.
+
+**Malformed and unexpected inputs**
+
+MF03, MF04, RQ02, and RQ06 continued to receive HTTP 200 responses instead of being rejected. Other malformed-input tests were rejected, and the flood test continued to block requests after the first five.
+
+- **What I would do:** Strengthen input validation so that empty or unexpected input formats are consistently rejected with clear client-error responses. I would add specific tests for each input format that currently receives HTTP 200.
+- **Why I stopped:** I focused this milestone's code change on scoring accuracy. Input validation is a separate issue that needs its own implementation and regression tests.
+
+### 2. Remaining Evaluation Criteria
+
+- **Criterion 1 – False positives: MET.** My 10 self-written samples produced zero high-confidence AI labels in all three trials.
+- **Criterion 2 – Score spread: NOT FULLY VERIFIED.** The before-and-after evaluation did not include the required five clearly AI-generated and five clearly human-written samples. I would add those samples and compare their average scores across three trials.
+- **Criterion 3 – Label coverage: MISSED.** All three samples received the `unsure` label in every trial. I would investigate the score distribution and improve the test samples and classification behavior so all three labels are represented.
+- **Criterion 4 – Appeal path: NOT MET.** Earlier audit evidence showed only two successful appeals, below the target of five. I would test five valid appeal attempts and verify that every corresponding submission is marked `under_review`.
+- **Criterion 5 – Bad input: NOT FULLY VERIFIED.** Missing, whitespace-only, and oversized inputs returned HTTP 400, but some malformed requests still received HTTP 200. I would add explicit tests for empty strings and every unexpected input format.
+
+I stopped without making additional changes because I wanted to keep the Milestone 5 experiment controlled: one scoring change, followed by a comparison using the same attack set. Fixing the remaining issues would require separate changes and additional testing.
+
+### 3. Real-World Trade-Off
+
+If this system were used in production, I would prioritize avoiding false accusations against human writers, even if that means allowing some AI-generated text to receive an `unsure` or `human` label. The people harmed by false accusations would be students, writers, and other users whose original work could be incorrectly flagged, while the trade-off would be that some AI-generated content goes undetected.
+
+### 4. Final Submission Evidence
+
+The repository contains the before-and-after attack results, evaluation reports, audit log extracts, and the diagnosis and explanation of the scoring change.
+
+**Before (70/30):**
+- `results/attack_run_2026-11-01_1716_before.md`
+- `results/run_2026-11-01_1717_before.md`
+- `results/audit_before.json`
+
+**After (50/50):**
+- `results/attack_run_2026-11-01_1723_after.md`
+- `results/run_2026-11-01_1726_after.md`
+- `results/audit_after.json`
+
+**Final scoring configuration:**
+- Model signal: 50%
+- Style signal: 50%
+- Human threshold: 0.35
+- AI threshold: 0.65
+
+**GitHub repository:**  
+https://github.com/Vig270/ai201-project4-provenance-guard-starter-v2026
+
+
+
+
+How I used AI for Unit 8 
+
+During Unit 8, I used ChatGPT as a learning and troubleshooting assistant to help understand the project requirements, interpret test results, investigate scoring behavior, and compare the before-and-after results. I also used it to help organize my README documentation and explain the remaining limitations and trade-offs. I ran the commands, reviewed the outputs, made the scoring-weight change, and evaluated the results myself. I used AI assistance to support my understanding and workflow, not to replace testing or verification.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 **Diagnoses**
 
 <!-- For each miss AND each broken attack: the stage and the mechanism.
@@ -747,6 +832,8 @@ Overall, the 50/50 weighting improved one important area without fixing every we
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
      Say which way you'd go and WHO PAYS FOR IT. -->
+
+
 
 
 
