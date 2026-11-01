@@ -54,8 +54,11 @@ DETECTOR_MAX_TOKENS = 400
 # down BEFORE you code it, and to put the numbers in your README. Whatever you
 # decide, it goes here.
 
-WEIGHT_MODEL_SIGNAL = 0.7
-WEIGHT_STYLE_SIGNAL = 0.3
+WEIGHT_MODEL_SIGNAL = 0.5
+WEIGHT_STYLE_SIGNAL = 0.5
+
+HUMAN_THRESHOLD = 0.35
+AI_THRESHOLD = 0.65
 
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────

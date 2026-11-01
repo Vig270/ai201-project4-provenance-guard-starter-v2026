@@ -610,6 +610,91 @@ The original success criteria and thresholds were preserved. Unmeasured or incom
 - `app.py`
 
 
+## Milestone 5: Fix One Thing and Re-run
+
+### 1. Improvement selected
+
+Based on the Milestone 4 diagnosis, I decided to adjust the weights assigned to the two scoring signals. The original configuration gave the model signal too much influence over the combined score, contributing to false-positive AI classifications in human-written samples.
+
+The original weights were:
+
+- Model signal: 70%
+- Style signal: 30%
+
+I changed the weights to:
+
+- Model signal: 50%
+- Style signal: 50%
+
+This was the only scoring change made for this experiment. I kept both label thresholds unchanged:
+
+- Human threshold: 0.35
+- AI threshold: 0.65
+
+**Reason for the change:** Reducing the model signal's influence and giving the style signal equal weight could help prevent human-written text from receiving high-confidence AI labels.
+
+### 2. Before-and-after attack results
+
+I ran the same 56 attacks using `python run_attacks.py --set attack_sets --label before` and `python run_attacks.py --set attack_sets --label after`.
+
+| Attack group | Before (70/30) | After (50/50) |
+|---|---|---|
+| Evasion | 3 human, 6 unsure, 1 AI | 4 human, 5 unsure, 1 AI |
+| False positives | 5 AI, 2 unsure, 1 human | 0 AI, 7 unsure, 1 human |
+| Prompt injection | 1 human, 5 unsure | 2 human, 4 unsure |
+| Malformed inputs | 4 accepted with HTTP 200; remaining requests rejected or rate-limited | Same results |
+| Flood protection | 5 accepted, 7 blocked with HTTP 429 | 5 accepted, 7 blocked with HTTP 429 |
+
+**Important observations:**
+
+- False-positive AI classifications decreased from five to zero. FP03–FP07 changed from `ai` to `unsure`.
+- Evasion results changed slightly: EV06 changed from `unsure` to `human`.
+- Prompt injection results changed: PI01 changed from `unsure` to `human`, while PI02 remained `human`.
+- Malformed-input handling did not improve. MF03, MF04, RQ02, and RQ06 continued to receive HTTP 200.
+- Rate limiting continued to work, blocking all seven requests beyond the five-request allowance.
+
+### 3. Before-and-after evaluation results
+
+I also ran `python run_eval.py --label before` and `python run_eval.py --label after`, with three trials for each scenario currently configured in `scenarios.py`.
+
+| Criterion | Before (70/30) | After (50/50) |
+|---|---|---|
+| Criterion 1 – False positives | 0/10 AI labels in all three trials | 0/10 AI labels in all three trials |
+| Criterion 3 – Label coverage | Only `unsure` appeared in all three trials | Only `unsure` appeared in all three trials |
+
+The evaluation results did not change between the two configurations.
+
+**Evaluation coverage limitation:** The current `scenarios.py` includes scenarios for Criteria 1 and 3 only. Criteria 2 (score spread), 4 (appeal path), and 5 (bad input) were not included in these automated before-and-after evaluation runs. Therefore, I am not claiming that all five criteria were reevaluated in Milestone 5.
+
+### 4. Did the improvement help?
+
+Yes, the change helped reduce false-positive AI classifications in the attack set. The number of human-written attack samples incorrectly labeled as AI decreased from five to zero.
+
+However, the improvement introduced trade-offs. Some evasion and prompt-injection samples received human labels instead of unsure labels. This shows that reducing the model signal's influence can reduce false positives but may also make certain AI-generated or adversarial samples harder to distinguish.
+
+The label coverage evaluation also remained unchanged, with all three samples receiving the `unsure` label. The experiment therefore did not solve the label coverage issue.
+
+Overall, the 50/50 weighting improved one important area without fixing every weakness. The results demonstrate why changes to a detection system should be measured against multiple types of tests rather than judged by one metric alone.
+
+### 5. Evidence and result files
+
+**Before (70/30):**
+- `results/attack_run_2026-11-01_1716_before.md`
+- `results/run_2026-11-01_1717_before.md`
+- `results/audit_before.json`
+
+**After (50/50):**
+- `results/attack_run_2026-11-01_1723_after.md`
+- `results/run_2026-11-01_1726_after.md`
+- `results/audit_after.json`
+
+**Final configuration:**
+- `WEIGHT_MODEL_SIGNAL = 0.5`
+- `WEIGHT_STYLE_SIGNAL = 0.5`
+- `HUMAN_THRESHOLD = 0.35`
+- `AI_THRESHOLD = 0.65`
+
+
 **Diagnoses**
 
 <!-- For each miss AND each broken attack: the stage and the mechanism.
